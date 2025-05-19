@@ -12,8 +12,9 @@
         /// Initializes a new instance of the <see cref="NzWalksDbContext"/> class.
         /// </summary>
         /// <param name="dbContextOptions">The dbContextOptions<see //cref="DbContextOptions"/></param>
-        public NzWalksDbContext(DbContextOptions dbContextOptions) : base(dbContextOptions)
+        public NzWalksDbContext(DbContextOptions<NzWalksDbContext> dbContextOptions) : base(dbContextOptions)
         {
+
         }
 
        

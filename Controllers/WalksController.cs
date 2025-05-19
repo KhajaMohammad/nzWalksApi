@@ -10,6 +10,7 @@ namespace nzWalksApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+
     public class WalksController : ControllerBase
     {
         private readonly IMapper mapper;
