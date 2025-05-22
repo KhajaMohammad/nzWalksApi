@@ -1,27 +1,25 @@
-﻿using System.Threading.Tasks;
-using AutoMapper;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using nzWalksApi.CustomActionFilters;
 using nzWalksApi.Data;
 using nzWalksApi.Models.Domain;
 using nzWalksApi.Models.DTO;
 using nzWalksApi.Repositories;
-using nzWalksApi.CustomActionFilters;
-using Microsoft.AspNetCore.Authorization;
 
 namespace nzWalksApi.Controllers
 {
-    // https:localhost:1234/api/regions
+    // Controller to manage Regions.
     [Route("api/[controller]")]
     [ApiController]
-    
- 
     public class RegionsController : ControllerBase
     {
-        private readonly IMapper mapper;
-        private readonly NzWalksDbContext dbContext;
-        private readonly IRegionRepository regionRepository;
+        private readonly IMapper mapper; // Used to map between domain models and DTOs.
+        private readonly NzWalksDbContext dbContext; // DbContext to interact with the database.
+        private readonly IRegionRepository regionRepository; // Repository to interact with region data.
 
+        // Constructor to inject dependencies (e.g., DbContext, Repository, Mapper).
         public RegionsController(
             NzWalksDbContext dbContext,
             IRegionRepository regionRepository,
@@ -33,127 +31,97 @@ namespace nzWalksApi.Controllers
             this.regionRepository = regionRepository;
         }
 
-        // GET all regions
-        // GET https:localhost:1234/api/regions
-        
-
+        // GET: /api/regions
         [HttpGet]
-
-       [Authorize(Roles ="Reader")]
-
+        [Authorize(Roles = "Reader")] // Only users with the "Reader" role can access this endpoint.
         public async Task<IActionResult> GetAll()
         {
+            // Fetch all regions from the repository.
             var regions = await regionRepository.GetAllAsync();
-            var regionDto = mapper.Map<List<RegionDto>>(regions);
+            var regionDto = mapper.Map<List<RegionDto>>(regions); // Map to DTOs.
 
-            //var regionDto = new List<RegionDto>();
-
-            //foreach (var region in regions)
-            //{
-
-            //    regionDto.Add(new RegionDto
-            //    {
-            //        Id = region.Id,
-            //        Name = region.Name,
-            //        Code = region.Code,
-            //        RegionImageUrl = region.RegionImageUrl
-
-            //    });
-
-            //}
-            return Ok(regionDto);
+            return Ok(regionDto); // Return the list of region DTOs.
         }
 
-        // GET Region BY ID
-        // GET http:localhost:1234/api/regions/{id}
-
+        // GET: /api/regions/{id}
         [HttpGet]
         [Route("{Id:Guid}")]
-        [Authorize(Roles = "Reader")]
+        [Authorize(Roles = "Reader")] // Only users with the "Reader" role can access this endpoint.
         public async Task<IActionResult> GetById(Guid Id)
         {
-            // var res = dbContext.regions.Find(ID);
-            // get data drom db
-            // map domain models to dto
-            // return dto
+            // Get region by ID from the repository.
             var res = await regionRepository.GetByIdAsync(Id);
 
+            // If region not found, return NotFound status.
             if (res == null)
             {
                 return NotFound();
             }
 
-            var regionDto = mapper.Map<RegionDto>(res);
+            var regionDto = mapper.Map<RegionDto>(res); // Map to DTO.
 
-            return Ok(regionDto);
+            return Ok(regionDto); // Return the region DTO.
         }
 
-        // post to create Region
-        // POST http://localhost:124/api/regions
+        // POST: /api/regions
         [HttpPost]
-        [ValidateModel]
-        [Authorize(Roles ="Writer")]
+        [ValidateModel] // Custom action filter to validate model before proceeding.
+        [Authorize(Roles = "Writer")] // Only users with the "Writer" role can create regions.
         public async Task<IActionResult> createRegion([FromBody] AddRegionDto receivedRegionDto)
         {
-            
-                var regionDomainModel = mapper.Map<Region>(receivedRegionDto);
+            // Convert DTO to domain model using AutoMapper.
+            var regionDomainModel = mapper.Map<Region>(receivedRegionDto);
 
-                // use domain model to create region
-                regionDomainModel = await regionRepository.createRegionAsync(regionDomainModel);
+            // Create the region in the repository.
+            regionDomainModel = await regionRepository.createRegionAsync(regionDomainModel);
 
-                // Map Domain model to create Region
+            var regionDto = mapper.Map<RegionDto>(regionDomainModel); // Map domain model to DTO.
 
-                var regionDto = mapper.Map<RegionDto>(regionDomainModel);
-            Console.WriteLine("Inside POSt before Return");
-                return CreatedAtAction(nameof(GetById), new { id = regionDto.Id }, regionDto);
-            
-            
+            return CreatedAtAction(nameof(GetById), new { id = regionDto.Id }, regionDto); // Return a Created status with location.
         }
 
-        // PUT update https://localhost:1234:/api/regions/{id}
+        // PUT: /api/regions/{id}
         [HttpPut]
         [Route("{Id:Guid}")]
-        [Authorize(Roles = "Writer")]
+        [Authorize(Roles = "Writer")] // Only users with the "Writer" role can update regions.
         public async Task<IActionResult> update(
             [FromRoute] Guid Id,
             [FromBody] UpdateRegionDto receivedRegionDto
         )
         {
-            // check if region exists
+            // Convert DTO to domain model.
+            var newRegion = mapper.Map<Region>(receivedRegionDto);
 
-            var newregion = mapper.Map<Region>(receivedRegionDto);
+            // Update the region in the repository.
+            var regionDomainModel = await regionRepository.updateAsync(Id, newRegion);
 
-            var regionDomainModel = await regionRepository.updateAsync(Id, newregion);
-
+            // If the region is not found, return NotFound status.
             if (regionDomainModel == null)
             {
                 return NotFound();
             }
 
-            // Map dto to domain model
+            var regionDto = mapper.Map<RegionDto>(regionDomainModel); // Map to DTO.
 
-            //convert domain model to dto
-
-            var regionDto = mapper.Map<RegionDto>(regionDomainModel);
-
-            return Ok(regionDto);
+            return Ok(regionDto); // Return updated region DTO.
         }
 
-        //delete region
-        //delete http://localhost:/api/regions/{id}
-
+        // DELETE: /api/regions/{id}
         [HttpDelete]
         [Route("{Id:Guid}")]
-        [Authorize(Roles = "Writer,Reader")]
+        [Authorize(Roles = "Writer,Reader")] // Both Writer and Reader roles can delete regions.
         public async Task<IActionResult> delete([FromRoute] Guid Id)
         {
+            // Delete the region from the repository.
             var regionDomainModel = await regionRepository.Delete(Id);
+
+            // If the region is not found, return NotFound status.
             if (regionDomainModel == null)
             {
                 return NotFound();
             }
 
-            return Ok(regionDomainModel);
+            return Ok(regionDomainModel); // Return the deleted region details.
         }
-    } // controller method
+    }
 }
