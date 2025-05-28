@@ -8,9 +8,23 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using nzWalksApi.Data;
 using nzWalksApi.Mappings;
+using nzWalksApi.Middlewares;
 using nzWalksApi.Repositories;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Add Logger
+
+var logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File("logs/NzWalks_log.txt", rollingInterval: RollingInterval.Minute)
+    .MinimumLevel.Warning()
+    .CreateLogger();
+
+builder.Logging.ClearProviders();
+
+builder.Logging.AddSerilog(logger);
 
 // Add services to the container.
 
@@ -134,6 +148,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger(); // Enables Swagger in development environment
     app.UseSwaggerUI(); // Enables Swagger UI in development environment
 }
+
+app.UseMiddleware<ExceptionHandlerMiddleware>();
 
 app.UseHttpsRedirection(); // Redirects HTTP requests to HTTPS
 

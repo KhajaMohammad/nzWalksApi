@@ -33,7 +33,7 @@ namespace nzWalksApi.Controllers
 
             // Call the repository to create the new walk in the database asynchronously.
             walkDomainModel = await walkRepository.CreateAsync(walkDomainModel);
-
+            
             // Map the created domain model to a DTO (WalkDto) and return it with a 200 OK response.
             return Ok(mapper.Map<WalkDto>(walkDomainModel));
         }
@@ -59,7 +59,7 @@ namespace nzWalksApi.Controllers
                 pageNuber,
                 pageSize
             );
-
+            
             // Map the list of domain models to a list of DTOs and return it in the response.
             return Ok(mapper.Map<List<WalkDto>>(allWalks));
         }

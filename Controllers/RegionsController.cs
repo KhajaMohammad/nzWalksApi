@@ -7,6 +7,8 @@ using nzWalksApi.Data;
 using nzWalksApi.Models.Domain;
 using nzWalksApi.Models.DTO;
 using nzWalksApi.Repositories;
+using Serilog.Data;
+using System.Text.Json;
 
 namespace nzWalksApi.Controllers
 {
@@ -18,17 +20,20 @@ namespace nzWalksApi.Controllers
         private readonly IMapper mapper; // Used to map between domain models and DTOs.
         private readonly NzWalksDbContext dbContext; // DbContext to interact with the database.
         private readonly IRegionRepository regionRepository; // Repository to interact with region data.
+        private readonly ILogger<RegionsController> logger;
 
         // Constructor to inject dependencies (e.g., DbContext, Repository, Mapper).
         public RegionsController(
             NzWalksDbContext dbContext,
             IRegionRepository regionRepository,
-            IMapper mapper
+            IMapper mapper,
+            ILogger<RegionsController> logger
         )
         {
             this.mapper = mapper;
             this.dbContext = dbContext;
             this.regionRepository = regionRepository;
+            this.logger = logger;
         }
 
         // GET: /api/regions
@@ -36,12 +41,28 @@ namespace nzWalksApi.Controllers
         [Authorize(Roles = "Reader")] // Only users with the "Reader" role can access this endpoint.
         public async Task<IActionResult> GetAll()
         {
-            // Fetch all regions from the repository.
-            var regions = await regionRepository.GetAllAsync();
-            var regionDto = mapper.Map<List<RegionDto>>(regions); // Map to DTOs.
 
-            return Ok(regionDto); // Return the list of region DTOs.
-        }
+            try
+            {
+
+                //logging
+                logger.LogInformation(" GetAll Regions controller invoked");
+               //throw new Exception("Custom Exception");
+                // Fetch all regions from the repository.
+                var regions = await regionRepository.GetAllAsync();
+                var regionDto = mapper.Map<List<RegionDto>>(regions); // Map to DTOs.
+                logger.LogInformation($"Finished fetching data of all regions :{JsonSerializer.Serialize(regions)}");
+               
+                return Ok(regionDto); // Return the list of region DTOs.
+            }
+            catch(Exception e )
+            {
+
+                logger.LogError(e.Message, e );
+                throw;
+
+            }
+            }// end try
 
         // GET: /api/regions/{id}
         [HttpGet]
@@ -66,7 +87,7 @@ namespace nzWalksApi.Controllers
         // POST: /api/regions
         [HttpPost]
         [ValidateModel] // Custom action filter to validate model before proceeding.
-        [Authorize(Roles = "Writer")] // Only users with the "Writer" role can create regions.
+       [Authorize(Roles = "Writer")] // Only users with the "Writer" role can create regions.
         public async Task<IActionResult> createRegion([FromBody] AddRegionDto receivedRegionDto)
         {
             // Convert DTO to domain model using AutoMapper.
@@ -83,7 +104,7 @@ namespace nzWalksApi.Controllers
         // PUT: /api/regions/{id}
         [HttpPut]
         [Route("{Id:Guid}")]
-        [Authorize(Roles = "Writer")] // Only users with the "Writer" role can update regions.
+       [Authorize(Roles = "Writer")] // Only users with the "Writer" role can update regions.
         public async Task<IActionResult> update(
             [FromRoute] Guid Id,
             [FromBody] UpdateRegionDto receivedRegionDto
@@ -109,7 +130,7 @@ namespace nzWalksApi.Controllers
         // DELETE: /api/regions/{id}
         [HttpDelete]
         [Route("{Id:Guid}")]
-        [Authorize(Roles = "Writer,Reader")] // Both Writer and Reader roles can delete regions.
+      [Authorize(Roles = "Writer,Reader")] // Both Writer and Reader roles can delete regions.
         public async Task<IActionResult> delete([FromRoute] Guid Id)
         {
             // Delete the region from the repository.
